@@ -1,0 +1,29 @@
+# Claude Code folder
+.claude/
+
+# VS Code Counter
+.VSCodeCounter/
+
+# Luanti/Minetest specific
+*.log
+nul
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
