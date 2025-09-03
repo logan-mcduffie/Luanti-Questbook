@@ -22,6 +22,7 @@ dofile(modpath .. "/gui/formspec.lua")
 dofile(modpath .. "/gui/handlers.lua")
 dofile(modpath .. "/gui/keybind.lua")
 dofile(modpath .. "/gui/party_commands.lua")
+dofile(modpath .. "/gui/player_controls.lua")
 dofile(modpath .. "/gui/sscsm_integration.lua")
 
 -- Load example quests (remove in production)

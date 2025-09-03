@@ -75,57 +75,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
         end
     end
     
-    -- Handle scroll container events (experimental mouse wheel detection)
-    if fields.canvas_scroll then
-        local state = questbook.gui.get_player_state(player_name)
-        local current_chapter = state.selected_chapter or "tutorial"
-        
-        -- Try to detect scroll direction changes
-        local scroll_val = tonumber(fields.canvas_scroll) or 0
-        local last_scroll = state.last_canvas_scroll or 0
-        
-        if scroll_val ~= last_scroll then
-            local scroll_diff = scroll_val - last_scroll
-            
-            -- Convert scroll to zoom (negative = zoom out, positive = zoom in)
-            if scroll_diff > 0 then
-                questbook.viewport.zoom_out(player_name, current_chapter, 0.1)
-            elseif scroll_diff < 0 then
-                questbook.viewport.zoom_in(player_name, current_chapter, 0.1)
-            end
-            
-            state.last_canvas_scroll = scroll_val
-            questbook.handlers.show_questbook(player_name)
-            return true
-        end
-    end
-    
-    -- Handle click-to-pan areas
-    if fields.pan_click_left then
-        local state = questbook.gui.get_player_state(player_name)
-        local current_chapter = state.selected_chapter or "tutorial"
-        questbook.viewport.pan(player_name, current_chapter, -100, 0)
-        questbook.handlers.show_questbook(player_name)
-        return true
-    elseif fields.pan_click_right then
-        local state = questbook.gui.get_player_state(player_name)
-        local current_chapter = state.selected_chapter or "tutorial"
-        questbook.viewport.pan(player_name, current_chapter, 100, 0)
-        questbook.handlers.show_questbook(player_name)
-        return true
-    elseif fields.pan_click_up then
-        local state = questbook.gui.get_player_state(player_name)
-        local current_chapter = state.selected_chapter or "tutorial"
-        questbook.viewport.pan(player_name, current_chapter, 0, -100)
-        questbook.handlers.show_questbook(player_name)
-        return true
-    elseif fields.pan_click_down then
-        local state = questbook.gui.get_player_state(player_name)
-        local current_chapter = state.selected_chapter or "tutorial"
-        questbook.viewport.pan(player_name, current_chapter, 0, 100)
-        questbook.handlers.show_questbook(player_name)
-        return true
-    end
     
     -- Handle tile clicks
     for field_name, _ in pairs(fields) do

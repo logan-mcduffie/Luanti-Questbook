@@ -20,12 +20,12 @@ function questbook.sscsm.init()
         return false
     end
     
-    -- Load client-side scripts via SSCSM
+    -- Load simple test script via SSCSM first
     local modpath = minetest.get_modpath("questbook")
-    local mouse_script_path = modpath .. "/sscsm/mouse_controls.lua"
+    local test_script_path = modpath .. "/sscsm/simple_test.lua"
     
-    -- Read and send client script
-    local file = io.open(mouse_script_path, "r")
+    -- Read and send test script
+    local file = io.open(test_script_path, "r")
     if file then
         local script_content = file:read("*all")
         file:close()
@@ -33,14 +33,14 @@ function questbook.sscsm.init()
         -- Try to register with SSCSM
         local success, err = pcall(function()
             sscsm.register({
-                name = "questbook:mouse_controls",
-                file = mouse_script_path,
-                description = "Questbook mouse controls"
+                name = "questbook:simple_test",
+                file = test_script_path,
+                description = "Questbook SSCSM test script"
             })
         end)
         
         if success then
-            minetest.log("action", "[Questbook] SSCSM mouse controls registered")
+            minetest.log("action", "[Questbook] SSCSM test script registered successfully")
             return true
         else
             minetest.log("error", "[Questbook] Failed to register SSCSM script: " .. tostring(err))
@@ -48,7 +48,7 @@ function questbook.sscsm.init()
             return false
         end
     else
-        minetest.log("error", "[Questbook] Could not read mouse controls script")
+        minetest.log("error", "[Questbook] Could not read SSCSM test script")
         return false
     end
 end
@@ -143,15 +143,16 @@ function questbook.sscsm.notify_controls(player_name)
     -- Debug: Log SSCSM status
     minetest.log("action", "[Questbook] SSCSM status for " .. player_name .. ": available=" .. tostring(sscsm_available))
     
+    -- Always show player control info since it's now the primary method
+    minetest.chat_send_player(player_name,
+        minetest.colorize("#00FF00", "[Questbook] ") ..
+        "Controls: WASD = Pan, LMB = Zoom In, RMB = Zoom Out, Aux1 = Reset. Try /questbook_test_controls"
+    )
+    
     if questbook.sscsm.player_has_support(player_name) then
         minetest.chat_send_player(player_name, 
-            minetest.colorize("#00FF00", "[Questbook] ") ..
-            "Advanced mouse controls enabled! Try WASD keys, or install SSCSM client mod for mouse drag/scroll."
-        )
-    else
-        minetest.chat_send_player(player_name,
-            minetest.colorize("#FFAA00", "[Questbook] ") ..
-            "Using button controls. For advanced mouse controls: 1) Install SSCSM mod, 2) Enable client scripting."
+            minetest.colorize("#AAAAAA", "[Questbook] ") ..
+            "SSCSM also available for advanced features."
         )
     end
 end
