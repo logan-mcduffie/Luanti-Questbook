@@ -142,7 +142,10 @@ function questbook.handlers.show_questbook(player_name)
         state.controls_notified = true
         -- Small delay to ensure formspec is shown first
         minetest.after(0.5, function()
-            questbook.sscsm.notify_controls(player_name)
+            -- Check if player is still online and SSCSM module is available
+            if minetest.get_player_by_name(player_name) and questbook.sscsm then
+                questbook.sscsm.notify_controls(player_name)
+            end
         end)
     end
 end

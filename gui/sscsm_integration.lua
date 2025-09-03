@@ -13,6 +13,13 @@ function questbook.sscsm.init()
         return false
     end
     
+    -- Check if SSCSM has the expected API
+    if not sscsm or not sscsm.register then
+        minetest.log("warning", "[Questbook] SSCSM API not available, using fallback controls")
+        sscsm_available = false
+        return false
+    end
+    
     -- Load client-side scripts via SSCSM
     local modpath = minetest.get_modpath("questbook")
     local mouse_script_path = modpath .. "/sscsm/mouse_controls.lua"
@@ -23,15 +30,23 @@ function questbook.sscsm.init()
         local script_content = file:read("*all")
         file:close()
         
-        -- Send script to all players with SSCSM
-        sscsm.register({
-            name = "questbook:mouse_controls",
-            file = mouse_script_path,
-            description = "Questbook mouse controls"
-        })
+        -- Try to register with SSCSM
+        local success, err = pcall(function()
+            sscsm.register({
+                name = "questbook:mouse_controls",
+                file = mouse_script_path,
+                description = "Questbook mouse controls"
+            })
+        end)
         
-        minetest.log("action", "[Questbook] SSCSM mouse controls registered")
-        return true
+        if success then
+            minetest.log("action", "[Questbook] SSCSM mouse controls registered")
+            return true
+        else
+            minetest.log("error", "[Questbook] Failed to register SSCSM script: " .. tostring(err))
+            sscsm_available = false
+            return false
+        end
     else
         minetest.log("error", "[Questbook] Could not read mouse controls script")
         return false
@@ -112,12 +127,19 @@ function questbook.sscsm.player_has_support(player_name)
         return false
     end
     
-    -- SSCSM provides a way to check if player has the client mod
-    return sscsm.has_csm_support(player_name) or false
+    -- SSCSM doesn't provide a direct way to check client support
+    -- We'll assume SSCSM is available if the server has it
+    -- The client script will only work if player has SSCSM client mod
+    return true
 end
 
 -- Send notification about mouse controls to players
 function questbook.sscsm.notify_controls(player_name)
+    -- Add safety check
+    if not player_name or not minetest.get_player_by_name(player_name) then
+        return
+    end
+    
     if questbook.sscsm.player_has_support(player_name) then
         minetest.chat_send_player(player_name, 
             minetest.colorize("#00FF00", "[Questbook] ") ..
