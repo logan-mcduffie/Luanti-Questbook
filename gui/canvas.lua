@@ -23,7 +23,7 @@ function questbook.canvas.render_main(player_name)
     local formspec = "size[" .. CANVAS_WIDTH .. "," .. CANVAS_HEIGHT .. "]" ..
                     "bgcolor[#0d0d0d;true]" ..  -- Darker background like FTB
                     "background[0,0;0,0;;true]" ..  -- Remove default background
-                    "style_type[item_image;bgimg=blank.png;bgimg_hovered=blank.png]"  -- Remove gray background from item images
+                    "style_type[item_image_button;bgcolor=#fff;bgcolor_hovered=#fff;bgcolor_pressed=#fff;bgimg=blank.png;bgimg_hovered=blank.png;border=false]"  -- Remove gray background from item images
     
     -- Left sidebar for chapters
     local sidebar = questbook.canvas.render_chapter_sidebar(player_name, current_chapter)
