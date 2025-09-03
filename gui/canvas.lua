@@ -22,7 +22,8 @@ function questbook.canvas.render_main(player_name)
     -- Start building full-screen formspec
     local formspec = "size[" .. CANVAS_WIDTH .. "," .. CANVAS_HEIGHT .. "]" ..
                     "bgcolor[#0d0d0d;true]" ..  -- Darker background like FTB
-                    "background[0,0;0,0;;true]"  -- Remove default background
+                    "background[0,0;0,0;;true]" ..  -- Remove default background
+                    "style_type[item_image;bgimg=blank.png;bgimg_hovered=blank.png]"  -- Remove gray background from item images
     
     -- Left sidebar for chapters
     local sidebar = questbook.canvas.render_chapter_sidebar(player_name, current_chapter)
