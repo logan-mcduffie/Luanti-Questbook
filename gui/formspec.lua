@@ -21,7 +21,8 @@ function questbook.gui.init_player(player_name)
             selected_category = "all",     -- Keep for legacy compatibility
             scroll_pos = 0,
             edit_mode = false,            -- Edit mode state
-            controls_notified = false     -- SSCSM controls notification flag
+            controls_notified = false,    -- SSCSM controls notification flag
+            last_canvas_scroll = 0        -- For scroll wheel detection
         }
     end
 end

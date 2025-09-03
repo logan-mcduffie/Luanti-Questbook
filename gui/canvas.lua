@@ -178,9 +178,26 @@ function questbook.canvas.render_quest_canvas(player_name, chapter)
     table.insert(formspec, "label[" .. (CHAPTER_SIDEBAR_WIDTH + 0.2) .. ",0.2;" .. 
                 minetest.colorize("#FFFFFF", "Quest Book - " .. chapter_display) .. "]")
     
+    -- Add scroll area for potential mouse wheel detection (experimental)
+    table.insert(formspec, "scrollbaroptions[max=1000;smallstep=50;largestep=200]")
+    table.insert(formspec, "scroll_container[" .. canvas_x .. "," .. canvas_y .. ";" .. canvas_width .. "," .. canvas_height .. ";canvas_scroll;vertical;0.5]")
+    
+    -- Create a large invisible area that might capture scroll events
+    table.insert(formspec, "box[0,0;" .. (canvas_width * 2) .. "," .. (canvas_height * 2) .. ";#00000000]")
+    
+    -- Add invisible clickable areas for simple pan control (click to center)
+    local pan_size = 1.0
+    table.insert(formspec, "button[" .. (canvas_width - pan_size) .. ",0;" .. pan_size .. "," .. pan_size .. ";pan_click_right;]")  -- Top right
+    table.insert(formspec, "button[0,0;" .. pan_size .. "," .. pan_size .. ";pan_click_left;]")  -- Top left
+    table.insert(formspec, "button[" .. (canvas_width/2 - pan_size/2) .. ",0;" .. pan_size .. "," .. pan_size .. ";pan_click_up;]")  -- Top center
+    table.insert(formspec, "button[" .. (canvas_width/2 - pan_size/2) .. "," .. (canvas_height - pan_size) .. ";" .. pan_size .. "," .. pan_size .. ";pan_click_down;]")  -- Bottom center
+    
     -- Render quest tiles
     local tiles_formspec = questbook.tiles.render_tiles(player_name, chapter, canvas_x, canvas_y, canvas_width, canvas_height)
     table.insert(formspec, tiles_formspec)
+    
+    -- Close scroll container
+    table.insert(formspec, "scroll_container_end[]")
     
     return table.concat(formspec)
 end

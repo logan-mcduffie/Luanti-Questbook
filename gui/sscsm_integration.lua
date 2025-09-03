@@ -140,18 +140,40 @@ function questbook.sscsm.notify_controls(player_name)
         return
     end
     
+    -- Debug: Log SSCSM status
+    minetest.log("action", "[Questbook] SSCSM status for " .. player_name .. ": available=" .. tostring(sscsm_available))
+    
     if questbook.sscsm.player_has_support(player_name) then
         minetest.chat_send_player(player_name, 
             minetest.colorize("#00FF00", "[Questbook] ") ..
-            "Advanced mouse controls enabled! Use mouse drag to pan, scroll wheel to zoom."
+            "Advanced mouse controls enabled! Try WASD keys, or install SSCSM client mod for mouse drag/scroll."
         )
     else
         minetest.chat_send_player(player_name,
             minetest.colorize("#FFAA00", "[Questbook] ") ..
-            "Using button controls. Install SSCSM for advanced mouse interactions."
+            "Using button controls. For advanced mouse controls: 1) Install SSCSM mod, 2) Enable client scripting."
         )
     end
 end
+
+-- Debug command to test mouse controls manually
+minetest.register_chatcommand("questbook_test_pan", {
+    params = "",
+    description = "Test questbook panning (debug)",
+    privs = {},
+    func = function(player_name, param)
+        local state = questbook.gui.get_player_state(player_name)
+        local current_chapter = state.selected_chapter or "tutorial"
+        
+        -- Test pan
+        if questbook.viewport.pan(player_name, current_chapter, 50, 0) then
+            questbook.handlers.show_questbook(player_name)
+            return true, "Panned right by 50 pixels"
+        else
+            return false, "Pan failed"
+        end
+    end,
+})
 
 -- Initialize when mod loads
 minetest.register_on_mods_loaded(function()
