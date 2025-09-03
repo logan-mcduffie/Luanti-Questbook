@@ -143,11 +143,18 @@ function questbook.sscsm.notify_controls(player_name)
     -- Debug: Log SSCSM status
     minetest.log("action", "[Questbook] SSCSM status for " .. player_name .. ": available=" .. tostring(sscsm_available))
     
-    -- Always show player control info since it's now the primary method
-    minetest.chat_send_player(player_name,
-        minetest.colorize("#00FF00", "[Questbook] ") ..
-        "Controls: WASD = Pan, LMB = Zoom In, RMB = Zoom Out, Aux1 = Reset. Try /questbook_test_controls"
-    )
+    -- Show appropriate control info based on available mods
+    if questbook.controls_mod and questbook.controls_mod.is_available() then
+        minetest.chat_send_player(player_name,
+            minetest.colorize("#00FF00", "[Questbook] ") ..
+            "Enhanced Controls: WASD = Smooth Pan, LMB = Zoom In, RMB = Zoom Out, Aux1 = Reset (via Controls mod)"
+        )
+    else
+        minetest.chat_send_player(player_name,
+            minetest.colorize("#FFAA00", "[Questbook] ") ..
+            "Basic Controls: WASD = Pan, LMB = Zoom In, RMB = Zoom Out, Aux1 = Reset. Install 'controls' mod for smoother experience."
+        )
+    end
     
     if questbook.sscsm.player_has_support(player_name) then
         minetest.chat_send_player(player_name, 

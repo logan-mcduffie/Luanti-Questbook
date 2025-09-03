@@ -46,31 +46,29 @@ function questbook.controls.handle_player_input(player_name)
     local current_chapter = state.selected_chapter or "tutorial"
     local current_time = minetest.get_us_time() / 1000000 -- Convert to seconds
     
-    -- Detect WASD movement for panning
-    local pan_speed = 50
-    local pan_cooldown = 0.1 -- Prevent too rapid panning
+    -- Detect WASD movement for panning - smoother approach
+    local base_pan_speed = 80
+    local pan_cooldown = 0.05 -- Faster refresh for smoother movement
     
     if current_time - control_state.last_pan_time > pan_cooldown then
-        local panned = false
+        local dx, dy = 0, 0
         
         if controls.up then
-            questbook.viewport.pan(player_name, current_chapter, 0, -pan_speed)
-            panned = true
+            dy = dy - base_pan_speed
         end
         if controls.down then
-            questbook.viewport.pan(player_name, current_chapter, 0, pan_speed)
-            panned = true
+            dy = dy + base_pan_speed
         end
         if controls.left then
-            questbook.viewport.pan(player_name, current_chapter, -pan_speed, 0)
-            panned = true
+            dx = dx - base_pan_speed
         end
         if controls.right then
-            questbook.viewport.pan(player_name, current_chapter, pan_speed, 0)
-            panned = true
+            dx = dx + base_pan_speed
         end
         
-        if panned then
+        -- Apply movement if any direction is pressed
+        if dx ~= 0 or dy ~= 0 then
+            questbook.viewport.pan(player_name, current_chapter, dx, dy)
             control_state.last_pan_time = current_time
             questbook.handlers.show_questbook(player_name)
         end
