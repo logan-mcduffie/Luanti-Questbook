@@ -42,6 +42,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
         end
     end
     
+    -- Handle edit mode toggle
+    if fields.toggle_edit_mode then
+        if questbook.gui.toggle_edit_mode(player_name) then
+            questbook.handlers.show_questbook(player_name)
+        end
+        return true
+    end
+    
+    
     -- Handle tile clicks
     for field_name, _ in pairs(fields) do
         if field_name:match("^tile_") then

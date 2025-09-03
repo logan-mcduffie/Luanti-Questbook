@@ -1,279 +1,170 @@
--- Tile rendering system for questbook GUI
--- Handles quest tile generation, icons, and visual states
+-- Simple quest tile rendering system
+-- 250x250 pixel tiles with item icons and color coding
 
 questbook.tiles = {}
 
--- Tile rendering constants
-local TILE_BORDER_WIDTH = 2
-local ICON_PADDING = 4
-local TEXT_HEIGHT = 12
-local PROGRESS_BAR_HEIGHT = 4
+-- Tile constants
+local TILE_SIZE = 1.25  -- 125 pixels = 1.25 formspec units
+local ITEM_SIZE = 0.75  -- Size of item icon
 
--- Tile state colors
-local TILE_COLORS = {
-    [questbook.data.STATUS.LOCKED] = "#444444",
-    [questbook.data.STATUS.AVAILABLE] = "#2E7D32", 
-    [questbook.data.STATUS.ACTIVE] = "#FFA726",
-    [questbook.data.STATUS.COMPLETED] = "#43A047",
-    [questbook.data.STATUS.FAILED] = "#E53935"
+-- Status colors
+local STATUS_COLORS = {
+    [questbook.data.STATUS.LOCKED] = "#666666",      -- Gray for locked
+    [questbook.data.STATUS.AVAILABLE] = "#FFA500",   -- Orange/Yellow for available
+    [questbook.data.STATUS.ACTIVE] = "#FFA500",      -- Orange/Yellow for active 
+    [questbook.data.STATUS.COMPLETED] = "#4CAF50",   -- Green for completed
+    [questbook.data.STATUS.FAILED] = "#E53935"       -- Red for failed
 }
 
-local BORDER_COLORS = {
-    [questbook.data.STATUS.LOCKED] = "#666666",
-    [questbook.data.STATUS.AVAILABLE] = "#4CAF50",
-    [questbook.data.STATUS.ACTIVE] = "#FFB74D", 
-    [questbook.data.STATUS.COMPLETED] = "#66BB6A",
-    [questbook.data.STATUS.FAILED] = "#EF5350"
-}
-
--- Generate formspec for a quest tile
-function questbook.tiles.render_tile(player_name, chapter, quest_id, quest_data)
-    local quest = quest_data.quest
-    local progress = quest_data.progress
+-- Render quest tiles in the canvas area
+function questbook.tiles.render_tiles(player_name, chapter, canvas_x, canvas_y, canvas_width, canvas_height)
+    local quests = questbook.get_player_quests(player_name)
+    local formspec = {}
     
-    if not quest.layout then
-        return "" -- No layout data, skip rendering
-    end
-    
-    -- Get tile configuration
-    local layout = quest.layout
-    local size_config = questbook.data.get_tile_size(layout.size)
-    local status = progress and progress.status or questbook.data.STATUS.LOCKED
-    
-    -- Transform world coordinates to screen coordinates
-    local screen_x, screen_y = questbook.viewport.world_to_screen(
-        player_name, chapter, layout.position.x, layout.position.y)
-    
-    -- Convert to formspec coordinates (formspec uses different scale)
-    local fs_x = screen_x / 100  -- Scale to formspec coordinates
-    local fs_y = screen_y / 100
-    local fs_width = size_config.width / 100
-    local fs_height = size_config.height / 100
-    
-    -- Get tile colors
-    local tile_color = layout.color or TILE_COLORS[status] or TILE_COLORS[questbook.data.STATUS.LOCKED]
-    local border_color = BORDER_COLORS[status] or BORDER_COLORS[questbook.data.STATUS.LOCKED]
-    
-    local formspec = ""
-    
-    -- Tile background
-    formspec = formspec .. "box[" .. fs_x .. "," .. fs_y .. ";" .. fs_width .. "," .. fs_height .. ";" .. tile_color .. "]"
-    
-    -- Tile border
-    local border_width = TILE_BORDER_WIDTH / 100
-    formspec = formspec .. "box[" .. (fs_x - border_width) .. "," .. (fs_y - border_width) .. ";" .. 
-               (fs_width + 2 * border_width) .. "," .. (fs_height + 2 * border_width) .. ";" .. border_color .. "]"
-    
-    -- Render icon
-    local icon_formspec = questbook.tiles.render_icon(layout.icon, fs_x, fs_y, size_config)
-    formspec = formspec .. icon_formspec
-    
-    -- Render title (if space allows)
-    if size_config.height >= 48 then -- Only show title on medium+ tiles
-        local title_y = fs_y + (size_config.icon_size / 100) + 0.1
-        local title_text = questbook.tiles.truncate_text(quest.title, size_config.width / 8)
-        formspec = formspec .. "label[" .. (fs_x + 0.1) .. "," .. title_y .. ";" .. 
-                   minetest.colorize("#FFFFFF", minetest.formspec_escape(title_text)) .. "]"
-    end
-    
-    -- Render progress bar (if active)
-    if status == questbook.data.STATUS.ACTIVE and progress then
-        local progress_formspec = questbook.tiles.render_progress_bar(
-            quest, progress, fs_x, fs_y, fs_width, fs_height)
-        formspec = formspec .. progress_formspec
-    end
-    
-    -- Clickable button overlay (invisible)
-    formspec = formspec .. "button[" .. fs_x .. "," .. fs_y .. ";" .. fs_width .. "," .. fs_height .. 
-               ";tile_" .. quest_id .. ";]"
-    
-    return formspec
-end
-
--- Render quest icon based on icon configuration
-function questbook.tiles.render_icon(icon_config, tile_x, tile_y, size_config)
-    if not icon_config or icon_config.type == questbook.data.ICON_TYPES.DEFAULT then
-        return questbook.tiles.render_default_icon(tile_x, tile_y, size_config)
-    elseif icon_config.type == questbook.data.ICON_TYPES.ITEM then
-        return questbook.tiles.render_item_icon(icon_config, tile_x, tile_y, size_config)
-    elseif icon_config.type == questbook.data.ICON_TYPES.IMAGE then
-        return questbook.tiles.render_image_icon(icon_config, tile_x, tile_y, size_config)
-    else
-        return questbook.tiles.render_default_icon(tile_x, tile_y, size_config)
-    end
-end
-
--- Render item icon with count overlay
-function questbook.tiles.render_item_icon(icon_config, tile_x, tile_y, size_config)
-    local icon_size = size_config.icon_size / 100
-    local icon_x = tile_x + (size_config.width / 100 - icon_size) / 2
-    local icon_y = tile_y + ICON_PADDING / 100
-    
-    local formspec = ""
-    
-    -- Item image
-    formspec = formspec .. "item_image[" .. icon_x .. "," .. icon_y .. ";" .. 
-               icon_size .. "," .. icon_size .. ";" .. icon_config.source .. "]"
-    
-    -- Count overlay (if count > 1)
-    if icon_config.count and icon_config.count > 1 then
-        local count_x = icon_x + icon_size - 0.3
-        local count_y = icon_y + icon_size - 0.2
-        formspec = formspec .. "label[" .. count_x .. "," .. count_y .. ";" .. 
-                   minetest.colorize("#FFFF00", tostring(icon_config.count)) .. "]"
-    end
-    
-    return formspec
-end
-
--- Render custom image icon  
-function questbook.tiles.render_image_icon(icon_config, tile_x, tile_y, size_config)
-    local icon_size = size_config.icon_size / 100
-    local icon_x = tile_x + (size_config.width / 100 - icon_size) / 2  
-    local icon_y = tile_y + ICON_PADDING / 100
-    
-    -- Custom image
-    local formspec = "image[" .. icon_x .. "," .. icon_y .. ";" .. 
-                    icon_size .. "," .. icon_size .. ";" .. icon_config.source .. "]"
-    
-    return formspec
-end
-
--- Render default/fallback icon
-function questbook.tiles.render_default_icon(tile_x, tile_y, size_config)
-    local icon_size = size_config.icon_size / 100
-    local icon_x = tile_x + (size_config.width / 100 - icon_size) / 2
-    local icon_y = tile_y + ICON_PADDING / 100
-    
-    -- Simple colored box as default icon
-    local formspec = "box[" .. icon_x .. "," .. icon_y .. ";" .. 
-                    icon_size .. "," .. icon_size .. ";#888888]"
-    
-    return formspec
-end
-
--- Render progress bar for active quests
-function questbook.tiles.render_progress_bar(quest, progress, tile_x, tile_y, tile_width, tile_height)
-    if not progress or not progress.objectives then
-        return ""
-    end
-    
-    -- Calculate overall completion percentage
-    local completed_objectives = 0
-    local total_objectives = 0
-    
-    for _, objective in ipairs(quest.objectives) do
-        if not objective.optional then
-            total_objectives = total_objectives + 1
-            local obj_progress = progress.objectives[objective.id] or 0
-            if obj_progress >= objective.count then
-                completed_objectives = completed_objectives + 1
+    for quest_id, quest_data in pairs(quests) do
+        local quest = quest_data.quest
+        local progress = quest_data.progress
+        
+        -- Only render quests in the current chapter
+        if quest.category == chapter then
+            -- Check if quest should be visible
+            local status = progress and progress.status or questbook.data.STATUS.LOCKED
+            if questbook.tiles.should_show_quest(quest, status) then
+                -- Transform world coordinates to screen coordinates using viewport
+                local screen_x, screen_y = questbook.viewport.world_to_screen(
+                    player_name, chapter, quest.tile_x, quest.tile_y)
+                
+                -- Convert to formspec coordinates and offset by canvas position
+                local tile_x = canvas_x + (screen_x / 100)
+                local tile_y = canvas_y + (screen_y / 100)
+                
+                -- Check if tile is within canvas bounds
+                if tile_x >= canvas_x - TILE_SIZE and tile_y >= canvas_y - TILE_SIZE and 
+                   tile_x <= canvas_x + canvas_width and tile_y <= canvas_y + canvas_height then
+                    
+                    local tile_formspec = questbook.tiles.render_single_tile(quest_id, quest, status, tile_x, tile_y)
+                    table.insert(formspec, tile_formspec)
+                end
             end
         end
     end
     
-    if total_objectives == 0 then
-        return ""
-    end
-    
-    local completion_percent = completed_objectives / total_objectives
-    
-    -- Progress bar dimensions
-    local bar_height = PROGRESS_BAR_HEIGHT / 100
-    local bar_width = tile_width - 0.2 -- Leave padding
-    local bar_x = tile_x + 0.1
-    local bar_y = tile_y + tile_height - bar_height - 0.1
-    
-    local formspec = ""
-    
-    -- Progress bar background
-    formspec = formspec .. "box[" .. bar_x .. "," .. bar_y .. ";" .. bar_width .. "," .. bar_height .. ";#333333]"
-    
-    -- Progress bar fill
-    local fill_width = bar_width * completion_percent
-    if fill_width > 0 then
-        formspec = formspec .. "box[" .. bar_x .. "," .. bar_y .. ";" .. fill_width .. "," .. bar_height .. ";#4CAF50]"
-    end
-    
-    return formspec
+    return table.concat(formspec)
 end
 
--- Truncate text to fit within specified width (approximate)
-function questbook.tiles.truncate_text(text, max_chars)
-    if #text <= max_chars then
-        return text
+-- Render a single quest tile
+function questbook.tiles.render_single_tile(quest_id, quest, status, x, y)
+    local formspec = {}
+    
+    -- Get tile color based on status
+    local tile_color = STATUS_COLORS[status] or STATUS_COLORS[questbook.data.STATUS.LOCKED]
+    
+    -- Base starting point for this quest tile (e.g., quest at 100, 250)
+    local base_x = x
+    local base_y = y
+    
+    -- Element sizes - exact pixel sizing
+    local button_size = 0.85  -- Gray button size - adjust this value to get perfect square
+    local bg_width = 0.7     -- Colored background width (x-axis)
+    local bg_height = 0.74    -- Colored background height (y-axis)
+    
+    -- ADJUST THESE OFFSETS TO POSITION EACH ELEMENT:
+    
+    -- Gray button position (offset from base)
+    local button_offset_x = 0.1    -- Adjust this to move button horizontally
+    local button_offset_y = 0.05    -- Adjust this to move button vertically
+    local button_x = base_x + button_offset_x
+    local button_y = base_y + button_offset_y
+    
+    -- Colored background position (offset from base) 
+    local bg_offset_x = 0.07        -- Adjust this to move colored box horizontally
+    local bg_offset_y = 0.04        -- Adjust this to move colored box vertically
+    local bg_x = base_x + bg_offset_x
+    local bg_y = base_y + bg_offset_y
+    
+    -- Item icon position (offset from base)
+    local item_offset_x = 0.12   -- Adjust this to move item horizontally 
+    local item_offset_y = 0.09   -- Adjust this to move item vertically
+    local item_x = base_x + item_offset_x
+    local item_y = base_y + item_offset_y
+    
+    -- RENDER ELEMENTS:
+    
+    -- Square clickable button (gray button)
+    table.insert(formspec, "button[" .. button_x .. "," .. button_y .. ";" .. button_size .. "," .. button_size .. 
+                ";tile_" .. quest_id .. ";]")
+    
+    -- Colored background box
+    table.insert(formspec, "box[" .. bg_x .. "," .. bg_y .. ";" .. bg_width .. "," .. bg_height .. ";" .. tile_color .. "]")
+    
+    -- Render item icon
+    if quest.tile_item and quest.tile_item ~= "" then
+        table.insert(formspec, "item_image[" .. item_x .. "," .. item_y .. ";" .. 
+                    ITEM_SIZE .. "," .. ITEM_SIZE .. ";" .. quest.tile_item .. "]")
+    else
+        -- Default icon if no item specified
+        local icon_size = 0.5
+        table.insert(formspec, "box[" .. item_x .. "," .. item_y .. ";" .. icon_size .. "," .. icon_size .. ";#777777]")
     end
     
-    return text:sub(1, max_chars - 3) .. "..."
-end
-
--- Generate formspec for all visible tiles in chapter
-function questbook.tiles.render_chapter(player_name, chapter, quests)
-    local visible_quests = questbook.viewport.get_visible_quests(player_name, chapter, quests)
-    local formspec = ""
+    -- Brighter colored border around the background (attached to bg_x, bg_y)
+    local border_width = 0.03
+    local border_color = tile_color .. "CC"  -- Add some brightness/alpha effect
     
-    -- Render each visible quest tile
-    for quest_id, quest_data in pairs(visible_quests) do
-        local tile_formspec = questbook.tiles.render_tile(player_name, chapter, quest_id, quest_data)
-        formspec = formspec .. tile_formspec
+    -- Four border pieces to create a brighter frame (positioned relative to colored background)
+    table.insert(formspec, "box[" .. bg_x .. "," .. bg_y .. ";" .. bg_width .. "," .. border_width .. ";" .. border_color .. "]")        -- Top
+    table.insert(formspec, "box[" .. bg_x .. "," .. (bg_y + bg_height - border_width) .. ";" .. bg_width .. "," .. border_width .. ";" .. border_color .. "]")  -- Bottom
+    table.insert(formspec, "box[" .. bg_x .. "," .. bg_y .. ";" .. border_width .. "," .. bg_height .. ";" .. border_color .. "]")        -- Left
+    table.insert(formspec, "box[" .. (bg_x + bg_width - border_width) .. "," .. bg_y .. ";" .. border_width .. "," .. bg_height .. ";" .. border_color .. "]")  -- Right
+    
+    -- Tooltip with quest title and mandatory/optional status
+    local tooltip_text = quest.title
+    if quest.objectives then
+        local has_optional = false
+        for _, obj in ipairs(quest.objectives) do
+            if obj.optional then
+                has_optional = true
+                break
+            end
+        end
+        tooltip_text = tooltip_text .. "\n" .. (has_optional and "[Has Optional]" or "[Mandatory]")
     end
+    table.insert(formspec, "tooltip[tile_" .. quest_id .. ";" .. minetest.formspec_escape(tooltip_text) .. "]")
     
-    return formspec
+    return table.concat(formspec)
 end
 
--- Get tile size configuration for a quest
-function questbook.tiles.get_quest_tile_size(quest)
-    if not quest or not quest.layout then
-        return questbook.data.TILE_SIZES.MEDIUM
-    end
-    
-    return questbook.data.get_tile_size(quest.layout.size)
-end
-
--- Check if screen coordinates are within a quest tile
-function questbook.tiles.is_point_in_tile(player_name, chapter, quest, screen_x, screen_y)
-    if not quest.layout then
+-- Check if a quest should be shown based on visibility settings
+function questbook.tiles.should_show_quest(quest, status)
+    -- If quest is hidden, don't show it
+    if quest.hidden then
         return false
     end
     
-    local tile_screen_x, tile_screen_y = questbook.viewport.world_to_screen(
-        player_name, chapter, quest.layout.position.x, quest.layout.position.y)
-    
-    local size_config = questbook.data.get_tile_size(quest.layout.size)
-    
-    return screen_x >= tile_screen_x and screen_x <= tile_screen_x + size_config.width and
-           screen_y >= tile_screen_y and screen_y <= tile_screen_y + size_config.height
-end
-
--- Get tile bounds in screen coordinates
-function questbook.tiles.get_tile_screen_bounds(player_name, chapter, quest)
-    if not quest.layout then
-        return nil
+    -- Check hide_when_locked setting
+    if quest.hide_when_locked and status == questbook.data.STATUS.LOCKED then
+        return false
     end
     
-    local screen_x, screen_y = questbook.viewport.world_to_screen(
-        player_name, chapter, quest.layout.position.x, quest.layout.position.y)
+    -- Always show non-locked quests
+    if status ~= questbook.data.STATUS.LOCKED then
+        return true
+    end
     
-    local size_config = questbook.data.get_tile_size(quest.layout.size)
-    
-    return {
-        x = screen_x,
-        y = screen_y, 
-        width = size_config.width,
-        height = size_config.height
-    }
+    -- For locked quests, check global visibility setting (assume visible for now)
+    return true
 end
 
--- Validate icon configuration
-function questbook.tiles.validate_icon(icon_config)
-    return questbook.data.validate_icon(icon_config)
+-- API functions for setting tile properties
+function questbook.tiles.set_tile_item(quest, item_name)
+    quest.tile_item = item_name or ""
+    return quest
 end
 
--- Create tile preview for admin tools (not implemented yet)
-function questbook.tiles.create_tile_preview(quest, status)
-    -- This would generate a preview image for quest positioning tools
-    -- Implementation depends on how admin interface is built
-    return "placeholder_preview.png"
+function questbook.tiles.set_tile_position(quest, x, y)
+    quest.tile_x = x or 0
+    quest.tile_y = y or 0
+    return quest
 end
 
-minetest.log("action", "[Questbook] Tile rendering system loaded")
+minetest.log("action", "[Questbook] Simple tile system loaded")

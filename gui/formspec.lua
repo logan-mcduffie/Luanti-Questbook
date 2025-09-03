@@ -19,7 +19,8 @@ function questbook.gui.init_player(player_name)
             selected_quest = nil,
             selected_chapter = "tutorial", -- Changed from category to chapter
             selected_category = "all",     -- Keep for legacy compatibility
-            scroll_pos = 0
+            scroll_pos = 0,
+            edit_mode = false             -- Edit mode state
         }
     end
 end
@@ -28,6 +29,31 @@ end
 function questbook.gui.get_player_state(player_name)
     questbook.gui.init_player(player_name)
     return questbook.gui.player_gui_state[player_name]
+end
+
+-- Check if player has edit permissions
+function questbook.gui.can_edit(player_name)
+    local player = minetest.get_player_by_name(player_name)
+    if not player then return false end
+    
+    -- Check for questbook_admin privilege
+    return minetest.check_player_privs(player_name, {questbook_admin = true})
+end
+
+-- Toggle edit mode for player
+function questbook.gui.toggle_edit_mode(player_name)
+    if not questbook.gui.can_edit(player_name) then
+        minetest.chat_send_player(player_name, "You don't have permission to use edit mode.")
+        return false
+    end
+    
+    local state = questbook.gui.get_player_state(player_name)
+    state.edit_mode = not state.edit_mode
+    
+    local mode_text = state.edit_mode and "enabled" or "disabled"
+    minetest.chat_send_player(player_name, "Edit mode " .. mode_text .. ".")
+    
+    return true
 end
 
 -- Get formspec for main questbook interface
@@ -52,10 +78,12 @@ function questbook.gui.get_legacy_formspec(player_name)
     -- Auto-start available quests when opening questbook
     questbook.auto_start_quests(player_name)
     
-    local formspec = GUI_SIZE .. 
-                    "bgcolor[#1a1a1a;true]" ..
-                    "box[0,0;14,10;#2a2a2a]" ..
-                    "label[0.5,0.5;" .. minetest.colorize("#ffffff", "Quest Book (Legacy)") .. "]"
+    local formspec = {
+        GUI_SIZE,
+        "bgcolor[#1a1a1a;true]",
+        "box[0,0;14,10;#2a2a2a]",
+        "label[0.5,0.5;" .. minetest.colorize("#ffffff", "Quest Book (Legacy)") .. "]"
+    }
     
     -- Show party info if player is in a party
     local party_id = questbook.party.get_player_party(player_name)
@@ -68,25 +96,25 @@ function questbook.gui.get_legacy_formspec(player_name)
                     online_count = online_count + 1
                 end
             end
-            formspec = formspec .. "label[9,0.5;" .. 
-                      minetest.colorize("#FFD700", "Party: " .. #party.members .. " members (" .. online_count .. " online)") .. "]"
+            table.insert(formspec, "label[9,0.5;" .. 
+                        minetest.colorize("#FFD700", "Party: " .. #party.members .. " members (" .. online_count .. " online)") .. "]")
         end
     end
     
     -- Category filter buttons
-    formspec = formspec .. questbook.gui.get_category_buttons(player_name)
+    table.insert(formspec, questbook.gui.get_category_buttons(player_name))
     
     -- Quest list
-    formspec = formspec .. questbook.gui.get_quest_list(player_name)
+    table.insert(formspec, questbook.gui.get_quest_list(player_name))
     
     -- Quest details panel
     if state.selected_quest then
-        formspec = formspec .. questbook.gui.get_quest_details(player_name, state.selected_quest)
+        table.insert(formspec, questbook.gui.get_quest_details(player_name, state.selected_quest))
     else
-        formspec = formspec .. questbook.gui.get_no_selection_panel()
+        table.insert(formspec, questbook.gui.get_no_selection_panel())
     end
     
-    return formspec
+    return table.concat(formspec)
 end
 
 -- Generate category filter buttons
@@ -94,13 +122,13 @@ function questbook.gui.get_category_buttons(player_name)
     local state = questbook.gui.player_gui_state[player_name]
     local categories = questbook.gui.get_quest_categories(player_name)
     
-    local formspec = ""
+    local formspec = {}
     local x_pos = 0.5
     local y_pos = 1.2
     
     -- All category button
     local all_style = state.selected_category == "all" and "button" or "button"
-    formspec = formspec .. all_style .. "[" .. x_pos .. "," .. y_pos .. ";1,0.6;cat_all;All]"
+    table.insert(formspec, all_style .. "[" .. x_pos .. "," .. y_pos .. ";1,0.6;cat_all;All]")
     x_pos = x_pos + 1.1
     
     -- Individual category buttons
@@ -112,11 +140,11 @@ function questbook.gui.get_category_buttons(player_name)
         
         local btn_style = state.selected_category == category and "button" or "button"
         local cap_category = category:sub(1,1):upper() .. category:sub(2)
-        formspec = formspec .. btn_style .. "[" .. x_pos .. "," .. y_pos .. ";1.5,0.6;cat_" .. category .. ";" .. cap_category .. "]"
+        table.insert(formspec, btn_style .. "[" .. x_pos .. "," .. y_pos .. ";1.5,0.6;cat_" .. category .. ";" .. cap_category .. "]")
         x_pos = x_pos + 1.6
     end
     
-    return formspec
+    return table.concat(formspec)
 end
 
 -- Generate quest list
@@ -135,8 +163,10 @@ function questbook.gui.get_quest_list(player_name)
         return a.data.quest.title < b.data.quest.title
     end)
     
-    local formspec = "box[0.5,2.5;" .. QUEST_LIST_SIZE .. ";#333333]" ..
-                    "label[0.7,2.7;" .. minetest.colorize("#ffff00", "Available Quests") .. "]"
+    local formspec = {
+        "box[0.5,2.5;" .. QUEST_LIST_SIZE .. ";#333333]",
+        "label[0.7,2.7;" .. minetest.colorize("#ffff00", "Available Quests") .. "]"
+    }
     
     local total_quests = #quest_array
     local visible_quests = 9 -- Number of quests that can fit in the display area
@@ -146,21 +176,21 @@ function questbook.gui.get_quest_list(player_name)
     if total_quests > visible_quests then
         -- Scroll up button
         if scroll_offset > 0 then
-            formspec = formspec .. "button[4.2,3.0;0.4,0.4;scroll_up;↑]"
+            table.insert(formspec, "button[4.2,3.0;0.4,0.4;scroll_up;↑]")
         else
-            formspec = formspec .. "button[4.2,3.0;0.4,0.4;scroll_up_disabled;" .. minetest.colorize("#666666", "↑") .. "]"
+            table.insert(formspec, "button[4.2,3.0;0.4,0.4;scroll_up_disabled;" .. minetest.colorize("#666666", "↑") .. "]")
         end
         
         -- Scroll down button
         if scroll_offset < (total_quests - visible_quests) then
-            formspec = formspec .. "button[4.2,8.8;0.4,0.4;scroll_down;↓]"
+            table.insert(formspec, "button[4.2,8.8;0.4,0.4;scroll_down;↓]")
         else
-            formspec = formspec .. "button[4.2,8.8;0.4,0.4;scroll_down_disabled;" .. minetest.colorize("#666666", "↓") .. "]"
+            table.insert(formspec, "button[4.2,8.8;0.4,0.4;scroll_down_disabled;" .. minetest.colorize("#666666", "↓") .. "]")
         end
         
         -- Scroll indicator
         local scroll_percent = math.floor((scroll_offset / (total_quests - visible_quests)) * 100)
-        formspec = formspec .. "label[4.3,9.4;" .. minetest.colorize("#AAAAAA", scroll_percent .. "%") .. "]"
+        table.insert(formspec, "label[4.3,9.4;" .. minetest.colorize("#AAAAAA", scroll_percent .. "%") .. "]")
     end
     
     local y_pos = 3.2
@@ -179,15 +209,15 @@ function questbook.gui.get_quest_list(player_name)
         
         -- Quest button with better styling (fit within panel)
         local btn_color = state.selected_quest == quest_id and "#4a4a4a" or "#2a2a2a"
-        formspec = formspec .. "box[0.7," .. y_pos .. ";3.6,0.6;" .. btn_color .. "]" ..
-                  "button[0.7," .. y_pos .. ";3.6,0.6;quest_" .. quest_id .. ";" .. 
-                  minetest.colorize(color, quest.title) .. "]"
+        table.insert(formspec, "box[0.7," .. y_pos .. ";3.6,0.6;" .. btn_color .. "]")
+        table.insert(formspec, "button[0.7," .. y_pos .. ";3.6,0.6;quest_" .. quest_id .. ";" .. 
+                    minetest.colorize(color, quest.title) .. "]")
         
         -- Progress indicator (positioned within panel)
         if progress and progress.status == questbook.data.STATUS.ACTIVE then
             local completion = questbook.gui.calculate_quest_completion(quest, progress)
-            formspec = formspec .. "label[3.8," .. (y_pos + 0.15) .. ";" .. 
-                      minetest.colorize("#FFFF00", completion .. "%") .. "]"
+            table.insert(formspec, "label[3.8," .. (y_pos + 0.15) .. ";" .. 
+                        minetest.colorize("#FFFF00", completion .. "%") .. "]")
         end
         
         y_pos = y_pos + 0.7
@@ -195,10 +225,10 @@ function questbook.gui.get_quest_list(player_name)
     end
     
     if total_quests == 0 then
-        formspec = formspec .. "label[0.7,4;No quests available in this category]"
+        table.insert(formspec, "label[0.7,4;No quests available in this category]")
     end
     
-    return formspec
+    return table.concat(formspec)
 end
 
 -- Generate quest details panel
@@ -226,9 +256,11 @@ function questbook.gui.get_quest_details(player_name, quest_id)
     local show_details = questbook.settings.should_show_quest_details(player_name, quest)
     local status = progress.status
     
-    local formspec = "box[5.5,2.5;" .. QUEST_DETAIL_SIZE .. ";#333333]" ..
-                    "label[5.7,2.7;" .. minetest.colorize("#ffff00", quest.title) .. "]" ..
-                    "label[5.7,3.2;" .. minetest.colorize("#aaaaaa", "Category: " .. (quest.category or "main")) .. "]"
+    local formspec = {
+        "box[5.5,2.5;" .. QUEST_DETAIL_SIZE .. ";#333333]",
+        "label[5.7,2.7;" .. minetest.colorize("#ffff00", quest.title) .. "]",
+        "label[5.7,3.2;" .. minetest.colorize("#aaaaaa", "Category: " .. (quest.category or "main")) .. "]"
+    }
     
     -- Show party quest indicator
     if quest.party_shared then

@@ -11,8 +11,6 @@ end
 -- Create a quest using builder pattern
 function questbook.create_quest(id, title, description)
     local quest = questbook.data.create_quest_template(id, title, description)
-    -- Initialize with default layout
-    quest.layout = questbook.data.create_quest_layout()
     return quest
 end
 
@@ -82,51 +80,18 @@ function questbook.set_quest_properties(quest, properties)
     return quest
 end
 
--- Set quest layout (position, size, icon)
-function questbook.set_quest_layout(quest, chapter, x, y, size)
-    if not quest.layout then
-        quest.layout = questbook.data.create_quest_layout()
-    end
-    
-    if chapter then quest.layout.chapter = chapter end
-    if x and y then 
-        quest.layout.position.x = x
-        quest.layout.position.y = y
-    end
-    if size then quest.layout.size = size end
-    
+-- Set quest tile item and position
+function questbook.set_quest_tile(quest, item_name, x, y)
+    quest.tile_item = item_name or ""
+    quest.tile_x = x or 0
+    quest.tile_y = y or 0
     return quest
 end
 
--- Set quest icon
-function questbook.set_quest_icon(quest, icon_type, source, count)
-    if not quest.layout then
-        quest.layout = questbook.data.create_quest_layout()
-    end
-    
-    quest.layout.icon = questbook.data.create_icon(icon_type, source, count)
-    return quest
-end
 
--- Set quest item icon (shorthand)
-function questbook.set_quest_item_icon(quest, item_name, count)
-    return questbook.set_quest_icon(quest, questbook.data.ICON_TYPES.ITEM, item_name, count)
-end
 
--- Set quest image icon (shorthand)
-function questbook.set_quest_image_icon(quest, image_path)
-    return questbook.set_quest_icon(quest, questbook.data.ICON_TYPES.IMAGE, image_path)
-end
 
--- Set quest tile color
-function questbook.set_quest_color(quest, color)
-    if not quest.layout then
-        quest.layout = questbook.data.create_quest_layout()
-    end
-    
-    quest.layout.color = color
-    return quest
-end
+
 
 -- Get registered quest by ID
 function questbook.get_quest(quest_id)

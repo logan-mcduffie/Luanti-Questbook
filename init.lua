@@ -51,4 +51,10 @@ minetest.register_on_mods_loaded(function()
     questbook.init()
 end)
 
+-- Register privileges
+minetest.register_privilege("questbook_admin", {
+    description = "Allows editing quests and questbook content",
+    give_to_singleplayer = true
+})
+
 minetest.log("action", "[Questbook] Questbook mod loaded")

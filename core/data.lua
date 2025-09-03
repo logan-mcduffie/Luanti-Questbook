@@ -63,7 +63,9 @@ questbook.data.quest_template = {
     show_progress_chat = false, -- Show chat notifications for progress updates
     hide_when_locked = nil, -- Override global visibility (nil=use global, true=hide when locked, false=always show)
     party_shared = false,   -- Allow party members to share progress on this quest
-    layout = {}             -- Visual layout configuration for tile-based GUI
+    tile_item = "",         -- Item to display on quest tile
+    tile_x = 0,             -- Tile X position in pixels
+    tile_y = 0              -- Tile Y position in pixels
 }
 
 -- Objective template structure
@@ -107,65 +109,9 @@ questbook.data.player_data_template = {
     settings = {}           -- Player-specific settings
 }
 
--- Quest layout template structure
-questbook.data.quest_layout_template = {
-    chapter = "main",       -- Chapter/page this quest belongs to
-    position = {x = 0, y = 0}, -- World coordinates (pixels)
-    size = "medium",        -- Tile size: "small", "medium", "large"
-    icon = {                -- Icon configuration
-        type = "default",   -- "item", "image", "default"
-        source = "",        -- Item name or image path
-        count = 1           -- Item count display (items only)
-    },
-    color = nil,            -- Optional custom tile color (#RRGGBB)
-    hidden = false,         -- Hide from visual display
-    connections = {}        -- Custom connection styling per prerequisite
-}
 
--- Icon types
-questbook.data.ICON_TYPES = {
-    ITEM = "item",          -- Use in-game item/block
-    IMAGE = "image",        -- Use custom PNG/texture file  
-    DEFAULT = "default"     -- Use auto-generated icon
-}
 
--- Tile sizes with dimensions (pixels)
-questbook.data.TILE_SIZES = {
-    SMALL = {
-        name = "small",
-        width = 64,
-        height = 48,
-        icon_size = 32
-    },
-    MEDIUM = {
-        name = "medium", 
-        width = 96,
-        height = 72,
-        icon_size = 48
-    },
-    LARGE = {
-        name = "large",
-        width = 128,
-        height = 96, 
-        icon_size = 64
-    }
-}
 
--- Chapter layout template
-questbook.data.chapter_template = {
-    name = "",              -- Display name
-    description = "",       -- Chapter description
-    background = nil,       -- Optional background image
-    icon = {                -- Chapter icon
-        type = "default",   -- "item", "image", "default"
-        source = "",        -- Item name or image path
-        count = 1           -- Item count (items only)
-    },
-    viewport = {            -- Default viewport for this chapter
-        x = 0, y = 0,       -- Initial pan position
-        zoom = 1.0          -- Initial zoom level
-    }
-}
 
 -- Validation functions
 function questbook.data.validate_quest(quest)
@@ -199,95 +145,8 @@ function questbook.data.validate_quest(quest)
     return true, "Valid quest"
 end
 
--- Validate quest layout
-function questbook.data.validate_quest_layout(layout)
-    if type(layout) ~= "table" then
-        return false, "Layout must be a table"
-    end
-    
-    -- Validate position
-    if layout.position then
-        if type(layout.position) ~= "table" then
-            return false, "Layout position must be a table"
-        end
-        if type(layout.position.x) ~= "number" or type(layout.position.y) ~= "number" then
-            return false, "Layout position must have numeric x and y coordinates"
-        end
-    end
-    
-    -- Validate size
-    if layout.size then
-        local valid_sizes = {"small", "medium", "large"}
-        local size_valid = false
-        for _, valid_size in ipairs(valid_sizes) do
-            if layout.size == valid_size then
-                size_valid = true
-                break
-            end
-        end
-        if not size_valid then
-            return false, "Layout size must be 'small', 'medium', or 'large'"
-        end
-    end
-    
-    -- Validate icon
-    if layout.icon then
-        local valid, message = questbook.data.validate_icon(layout.icon)
-        if not valid then
-            return false, "Layout icon invalid: " .. message
-        end
-    end
-    
-    return true, "Valid layout"
-end
 
--- Validate icon configuration
-function questbook.data.validate_icon(icon)
-    if type(icon) ~= "table" then
-        return false, "Icon must be a table"
-    end
-    
-    local valid_types = {"item", "image", "default"}
-    local type_valid = false
-    for _, valid_type in ipairs(valid_types) do
-        if icon.type == valid_type then
-            type_valid = true
-            break
-        end
-    end
-    if not type_valid then
-        return false, "Icon type must be 'item', 'image', or 'default'"
-    end
-    
-    -- Validate item icons
-    if icon.type == "item" then
-        if not icon.source or icon.source == "" then
-            return false, "Item icons must have a valid source item name"
-        end
-        if icon.count and (type(icon.count) ~= "number" or icon.count < 1) then
-            return false, "Item icon count must be a positive number"
-        end
-    end
-    
-    -- Validate image icons
-    if icon.type == "image" then
-        if not icon.source or icon.source == "" then
-            return false, "Image icons must have a valid source file path"
-        end
-    end
-    
-    return true, "Valid icon"
-end
 
--- Get tile size configuration
-function questbook.data.get_tile_size(size_name)
-    for _, size_config in pairs(questbook.data.TILE_SIZES) do
-        if size_config.name == size_name then
-            return size_config
-        end
-    end
-    return questbook.data.TILE_SIZES.MEDIUM -- Default fallback
-end
 
 function questbook.data.create_quest_template(id, title, description)
     local quest = table.copy(questbook.data.quest_template)
@@ -324,42 +183,10 @@ function questbook.data.create_currency_reward(amount)
     return reward
 end
 
--- Create a quest layout configuration
-function questbook.data.create_quest_layout(chapter, x, y, size)
-    local layout = table.copy(questbook.data.quest_layout_template)
-    layout.chapter = chapter or "main"
-    layout.position = {x = x or 0, y = y or 0}
-    layout.size = size or "medium"
-    return layout
-end
 
--- Create an icon configuration
-function questbook.data.create_icon(icon_type, source, count)
-    local icon = {
-        type = icon_type or questbook.data.ICON_TYPES.DEFAULT,
-        source = source or "",
-        count = count or 1
-    }
-    return icon
-end
 
--- Create item icon shorthand
-function questbook.data.create_item_icon(item_name, count)
-    return questbook.data.create_icon(questbook.data.ICON_TYPES.ITEM, item_name, count)
-end
 
--- Create image icon shorthand  
-function questbook.data.create_image_icon(image_path)
-    return questbook.data.create_icon(questbook.data.ICON_TYPES.IMAGE, image_path)
-end
 
--- Create chapter configuration
-function questbook.data.create_chapter(name, description)
-    local chapter = table.copy(questbook.data.chapter_template)
-    chapter.name = name or ""
-    chapter.description = description or ""
-    return chapter
-end
 
 -- Create a lootbag reward
 function questbook.data.create_lootbag_reward(name, items, max_rolls)

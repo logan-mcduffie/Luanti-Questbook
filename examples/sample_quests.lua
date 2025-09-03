@@ -12,9 +12,7 @@ questbook.add_objective(first_quest, "collect_stone", "collect", "Collect stone"
 questbook.add_reward(first_quest, "item", "default:pick_stone", 1)
 questbook.add_reward(first_quest, "item", "default:axe_stone", 1)
 questbook.set_quest_properties(first_quest, {category = "tutorial"})
--- Set layout with item icon
-questbook.set_quest_layout(first_quest, "tutorial", 100, 100, "medium")
-questbook.set_quest_item_icon(first_quest, "default:tree", 10)
+questbook.set_quest_tile(first_quest, "default:tree", 100, 100)
 
 -- Crafting quest with prerequisites
 local crafting_quest = questbook.create_quest(
@@ -29,9 +27,7 @@ questbook.add_reward(crafting_quest, "item", "default:pick_steel", 1)
 questbook.add_reward(crafting_quest, "item", "default:torch", 20)
 questbook.set_prerequisites(crafting_quest, {"questbook:first_steps"})
 questbook.set_quest_properties(crafting_quest, {category = "tutorial"})
--- Set layout with crafting table icon
-questbook.set_quest_layout(crafting_quest, "tutorial", 300, 100, "medium")
-questbook.set_quest_item_icon(crafting_quest, "default:chest", 1)
+questbook.set_quest_tile(crafting_quest, "default:chest", 350, 100)
 
 -- Building quest
 local building_quest = questbook.create_quest(
@@ -46,9 +42,7 @@ questbook.add_reward(building_quest, "item", "default:glass", 10)
 questbook.add_reward(building_quest, "item", "wool:white", 5)
 questbook.set_prerequisites(building_quest, {"questbook:basic_crafting"})
 questbook.set_quest_properties(building_quest, {category = "building"})
--- Set layout with building icon
-questbook.set_quest_layout(building_quest, "tutorial", 500, 100, "medium")
-questbook.set_quest_item_icon(building_quest, "default:wood", 50)
+questbook.set_quest_tile(building_quest, "default:wood", 600, 100)
 
 -- Exploration quest
 local exploration_quest = questbook.create_quest(
@@ -65,6 +59,7 @@ questbook.add_reward(exploration_quest, "item", "default:pick_diamond", 1)
 questbook.add_reward(exploration_quest, "item", "default:torch", 50)
 questbook.set_prerequisites(exploration_quest, {"questbook:shelter_builder"})
 questbook.set_quest_properties(exploration_quest, {category = "exploration"})
+questbook.set_quest_tile(exploration_quest, "default:stone_with_coal", 100, 400)
 
 -- Advanced quest chain
 local master_quest = questbook.create_quest(
@@ -79,9 +74,7 @@ questbook.add_reward(master_quest, "item", "default:mese_block", 2)
 questbook.add_reward(master_quest, "item", "default:diamondblock", 1)
 questbook.set_prerequisites(master_quest, {"questbook:cave_explorer"})
 questbook.set_quest_properties(master_quest, {category = "advanced"})
--- Large tile for major milestone
-questbook.set_quest_layout(master_quest, "advanced", 200, 300, "large")
-questbook.set_quest_item_icon(master_quest, "default:mese_block", 2)
+questbook.set_quest_tile(master_quest, "default:mese_block", 350, 400)
 
 -- Repeatable daily quest
 local daily_quest = questbook.create_quest(
@@ -97,6 +90,7 @@ questbook.set_quest_properties(daily_quest, {
     repeatable = true,
     time_limit = 86400 -- 24 hours in seconds
 })
+questbook.set_quest_tile(daily_quest, "default:dirt", 100, 100)
 
 -- Example quest WITH progress notifications (for testing/demonstration)
 local verbose_quest = questbook.create_quest(
@@ -110,9 +104,7 @@ questbook.set_quest_properties(verbose_quest, {
     category = "tutorial", 
     show_progress_chat = true -- Enable progress notifications
 })
--- Small side quest tile
-questbook.set_quest_layout(verbose_quest, "tutorial", 250, 250, "small")
-questbook.set_quest_item_icon(verbose_quest, "default:cobble", 5)
+questbook.set_quest_tile(verbose_quest, "default:cobble", 100, 250)
 
 -- Example quest that hides when locked (demonstrates per-quest visibility)
 local secret_quest = questbook.create_quest(
