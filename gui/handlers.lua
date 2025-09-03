@@ -135,6 +135,16 @@ end)
 function questbook.handlers.show_questbook(player_name)
     local formspec = questbook.gui.get_main_formspec(player_name)
     minetest.show_formspec(player_name, "questbook:main", formspec)
+    
+    -- Notify about available controls (only once per session)
+    local state = questbook.gui.get_player_state(player_name)
+    if not state.controls_notified then
+        state.controls_notified = true
+        -- Small delay to ensure formspec is shown first
+        minetest.after(0.5, function()
+            questbook.sscsm.notify_controls(player_name)
+        end)
+    end
 end
 
 -- Handle category selection

@@ -20,7 +20,8 @@ function questbook.gui.init_player(player_name)
             selected_chapter = "tutorial", -- Changed from category to chapter
             selected_category = "all",     -- Keep for legacy compatibility
             scroll_pos = 0,
-            edit_mode = false             -- Edit mode state
+            edit_mode = false,            -- Edit mode state
+            controls_notified = false     -- SSCSM controls notification flag
         }
     end
 end
